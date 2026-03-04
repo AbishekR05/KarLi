@@ -1,0 +1,2357 @@
+--- d:\Full Stack\KarLi\Documentation\KarLiFashion_APISpec.docx ---
+✦  KARLI FASHION  ✦
+API Specification Document
+Jewellery Ornaments E-Commerce Website
+Version 1.0  |  March 2026
+Base URL: http://localhost:5000/api
+1. Overview
+This document defines every REST API endpoint exposed by the KarLi Fashion backend. The React frontend communicates exclusively through these endpoints. All requests and responses use JSON. The base URL for all endpoints is http://localhost:5000/api in development and the live server URL in production.
+Base URL (dev)
+http://localhost:5000/api
+Data Format
+JSON — all requests and responses
+Auth Method
+Bearer token in Authorization header
+Token Storage
+localStorage — 'karli_user_token' / 'karli_admin_token'
+User Token Expiry
+7 days
+Admin Token Expiry
+24 hours
+File Uploads
+multipart/form-data for product image endpoints
+Error Format
+{ success: false, message: 'description of error' }
+Success Format
+{ success: true, data: { ... } }
+1.1 Auth Levels
+Public
+No token required — anyone can call this endpoint
+User
+Requires valid karli_user_token in Authorization header
+Admin
+Requires valid karli_admin_token and role === 'admin'
+1.2 Standard Error Responses
+400 Bad Request
+Missing or invalid fields in the request body
+401 Unauthorized
+No token provided or token is expired / invalid
+403 Forbidden
+Valid token but insufficient role (e.g. customer hitting admin route)
+404 Not Found
+The requested resource does not exist
+500 Server Error
+Unexpected server-side error
+2. Auth Endpoints  /api/auth
+Method
+Endpoint
+Auth
+Description
+POST
+/api/auth/register
+Public
+Register a new customer account
+POST
+/api/auth/login
+Public
+Log in as a customer
+POST
+/api/auth/admin-login
+Public
+Log in as an admin
+POST  /api/auth/register   — Register a new customer
+Request Body
+Field
+Type
+Required
+Description
+fullName
+String
+Yes
+Full name of the user
+email
+String
+Yes
+Valid email address — must be unique
+password
+String
+Yes
+Minimum 8 characters
+phone
+String
+No
+Optional contact number
+Success Response  201
+{ "success": true, "data": { "token": "<jwt>", "user": { "id": "...", "fullName": "...", "email": "...", "role": "customer" } } }
+POST  /api/auth/login   — Customer login
+Request Body
+Field
+Type
+Required
+Description
+email
+String
+Yes
+Registered email address
+password
+String
+Yes
+Account password
+Success Response  200
+{ "success": true, "data": { "token": "<jwt>", "user": { "id": "...", "fullName": "...", "email": "...", "role": "customer" } } }
+POST  /api/auth/admin-login   — Admin login
+Request Body
+Field
+Type
+Required
+Description
+email
+String
+Yes
+Admin account email
+password
+String
+Yes
+Admin account password
+Success Response  200
+{ "success": true, "data": { "token": "<jwt>", "user": { "id": "...", "fullName": "...", "role": "admin" } } }
+3. Product Endpoints  /api/products
+Method
+Endpoint
+Auth
+Description
+GET
+/api/products
+Public
+Get all active products (with filters & search)
+GET
+/api/products/:id
+Public
+Get a single product by ID
+GET
+/api/products/category/:cat
+Public
+Get products filtered by category
+POST
+/api/products
+Admin
+Create a new product
+PUT
+/api/products/:id
+Admin
+Update an existing product
+DELETE
+/api/products/:id
+Admin
+Delete a product
+GET  /api/products   — Get all products — supports filters and search
+Query Parameters
+Field
+Type
+Required
+Description
+search
+String
+No
+Search term matched against product name
+category
+String
+No
+Filter by category: rings, necklaces, earrings, bracelets, bangles, other
+minPrice
+Number
+No
+Minimum price filter (INR)
+maxPrice
+Number
+No
+Maximum price filter (INR)
+material
+String
+No
+Filter by material: Gold, Silver, Platinum, Rose Gold
+sort
+String
+No
+Sort order: newest, price_asc, price_desc, popular
+page
+Number
+No
+Page number for pagination (default: 1)
+limit
+Number
+No
+Results per page (default: 12)
+Success Response  200
+{ "success": true, "data": { "products": [ { "id": "...", "name": "...", "price": 4500,
+    "discountedPrice": 3600, "category": "RINGS", "images": ["..."], "stockQuantity": 10 } ],
+  "total": 48, "page": 1, "totalPages": 4 } }
+GET  /api/products/:id   — Get full details of one product
+Success Response  200
+{ "success": true, "data": { "id": "...", "name": "...", "description": "...", "category": "RINGS",
+  "material": "Gold", "weightGrams": 5.2, "price": 4500, "discountedPrice": 3600,
+  "discountEnabled": true, "discountType": "PERCENTAGE", "discountValue": 20,
+  "discountStart": "2026-03-01", "discountEnd": "2026-03-31",
+  "stockQuantity": 10, "images": ["uploads/img1.jpg"], "status": "ACTIVE" } }
+POST  /api/products   — Create a new product — multipart/form-data
+Request Body  (multipart/form-data)
+Field
+Type
+Required
+Description
+name
+String
+Yes
+Product name
+description
+String
+Yes
+Full product description
+category
+String
+Yes
+RINGS / NECKLACES / EARRINGS / BRACELETS / BANGLES / OTHER
+material
+String
+Yes
+Gold / Silver / Platinum / Rose Gold
+price
+Number
+Yes
+Original price in INR
+stockQuantity
+Number
+Yes
+Available stock units
+weightGrams
+Number
+No
+Product weight in grams
+status
+String
+No
+ACTIVE or INACTIVE (default: ACTIVE)
+discountEnabled
+Boolean
+No
+true or false (default: false)
+discountType
+String
+No
+PERCENTAGE or FLAT — required if discountEnabled is true
+discountValue
+Number
+No
+Discount amount — required if discountEnabled is true
+discountStart
+String
+No
+ISO date string — required if discountEnabled is true
+discountEnd
+String
+No
+ISO date string — required if discountEnabled is true
+images
+File[]
+No
+Up to 5 image files (jpg/png)
+Success Response  201
+{ "success": true, "data": { "id": "...", "name": "...", ... } }
+PUT  /api/products/:id   — Update an existing product — multipart/form-data
+Same fields as POST /api/products. Only include fields you want to update — all fields are optional on update.
+Success Response  200
+{ "success": true, "data": { updated product object } }
+DELETE  /api/products/:id   — Delete a product permanently
+Success Response  200
+{ "success": true, "message": "Product deleted successfully" }
+4. Order Endpoints  /api/orders
+Method
+Endpoint
+Auth
+Description
+POST
+/api/orders
+User
+Place a new order
+GET
+/api/orders/my-orders
+User
+Get all orders for the logged-in user
+GET
+/api/orders/my-orders/:id
+User
+Get details of one of the user's orders
+GET
+/api/orders
+Admin
+Get all orders (with filters)
+GET
+/api/orders/:id
+Admin
+Get full details of any order
+PATCH
+/api/orders/:id/status
+Admin
+Update the status of an order
+POST  /api/orders   — Place a new order
+Request Body
+Field
+Type
+Required
+Description
+items
+Array
+Yes
+Array of { productId, quantity }
+shippingName
+String
+Yes
+Recipient full name
+shippingAddress
+String
+Yes
+Street address
+shippingCity
+String
+Yes
+City
+shippingState
+String
+Yes
+State
+shippingPincode
+String
+Yes
+PIN code
+shippingPhone
+String
+Yes
+Contact phone number
+paymentMethod
+String
+No
+COD / CARD / UPI (default: COD)
+Success Response  201
+{ "success": true, "data": { "id": "...", "status": "PENDING", "totalAmount": 7200,
+  "items": [ { "productId": "...", "productName": "...", "quantity": 2,
+    "unitPrice": 4500, "discountedPrice": 3600 } ], ... } }
+GET  /api/orders/my-orders   — Get all orders for the logged-in customer
+Success Response  200
+{ "success": true, "data": [ { "id": "...", "status": "DELIVERED", "totalAmount": 7200,
+  "createdAt": "2026-03-01T10:00:00Z", "items": [ ... ] } ] }
+GET  /api/orders/my-orders/:id   — Get full details of one user order
+Returns the full order including items, shipping address, status history, and totals. Returns 403 if the order does not belong to the requesting user.
+Success Response  200
+{ "success": true, "data": { full order object with statusHistory array } }
+GET  /api/orders   — Admin — get all orders with optional filters
+Query Parameters
+Field
+Type
+Required
+Description
+status
+String
+No
+Filter by: PENDING / PROCESSING / SHIPPED / DELIVERED / CANCELLED
+search
+String
+No
+Search by order ID or customer name
+page
+Number
+No
+Page number (default: 1)
+limit
+Number
+No
+Results per page (default: 20)
+Success Response  200
+{ "success": true, "data": { "orders": [ { ... } ], "total": 120, "page": 1, "totalPages": 6 } }
+PATCH  /api/orders/:id/status   — Admin — update order status
+Request Body
+Field
+Type
+Required
+Description
+status
+String
+Yes
+New status: PENDING / PROCESSING / SHIPPED / DELIVERED / CANCELLED
+note
+String
+No
+Optional admin note logged in status history
+Success Response  200
+{ "success": true, "data": { "id": "...", "status": "SHIPPED", "statusHistory": [ ... ] } }
+5. User Endpoints  /api/users
+Method
+Endpoint
+Auth
+Description
+GET
+/api/users/profile
+User
+Get the logged-in user's profile
+PUT
+/api/users/profile
+User
+Update name, email, or phone
+PUT
+/api/users/password
+User
+Change password
+GET
+/api/users
+Admin
+Get all users (with search & filter)
+GET
+/api/users/:id
+Admin
+Get a specific user's profile and orders
+PATCH
+/api/users/:id/status
+Admin
+Block or unblock a user
+GET  /api/users/profile   — Get logged-in user profile
+Success Response  200
+{ "success": true, "data": { "id": "...", "fullName": "...", "email": "...", "phone": "...", "createdAt": "..." } }
+PUT  /api/users/profile   — Update profile details
+Request Body
+Field
+Type
+Required
+Description
+fullName
+String
+No
+Updated full name
+email
+String
+No
+Updated email — must be unique
+phone
+String
+No
+Updated phone number
+Success Response  200
+{ "success": true, "data": { updated user object } }
+PUT  /api/users/password   — Change password
+Request Body
+Field
+Type
+Required
+Description
+currentPassword
+String
+Yes
+User's current password for verification
+newPassword
+String
+Yes
+New password — minimum 8 characters
+Success Response  200
+{ "success": true, "message": "Password updated successfully" }
+GET  /api/users   — Admin — get all users
+Query Parameters
+Field
+Type
+Required
+Description
+search
+String
+No
+Search by name or email
+status
+String
+No
+Filter by: ACTIVE or BLOCKED
+page
+Number
+No
+Page number (default: 1)
+limit
+Number
+No
+Results per page (default: 20)
+Success Response  200
+{ "success": true, "data": { "users": [ { "id": "...", "fullName": "...", "email": "...",
+  "status": "ACTIVE", "totalOrders": 3, "createdAt": "..." } ], "total": 55 } }
+PATCH  /api/users/:id/status   — Admin — block or unblock a user
+Request Body
+Field
+Type
+Required
+Description
+status
+String
+Yes
+ACTIVE or BLOCKED
+Success Response  200
+{ "success": true, "message": "User status updated", "data": { "id": "...", "status": "BLOCKED" } }
+6. Wishlist Endpoints  /api/wishlist
+Method
+Endpoint
+Auth
+Description
+GET
+/api/wishlist
+User
+Get the logged-in user's wishlist
+POST
+/api/wishlist
+User
+Add a product to the wishlist
+DELETE
+/api/wishlist/:productId
+User
+Remove a product from the wishlist
+GET  /api/wishlist   — Get all wishlisted products for the logged-in user
+Success Response  200
+{ "success": true, "data": [ { "id": "...", "product": { "id": "...", "name": "...",
+  "price": 4500, "discountedPrice": 3600, "images": ["..."], "stockQuantity": 8 } } ] }
+POST  /api/wishlist   — Add a product to wishlist
+Request Body
+Field
+Type
+Required
+Description
+productId
+String
+Yes
+MongoDB ObjectId of the product to add
+Success Response  201
+{ "success": true, "message": "Added to wishlist", "data": { "id": "...", "productId": "..." } }
+Returns 400 if product is already in the wishlist
+DELETE  /api/wishlist/:productId   — Remove a product from wishlist
+Success Response  200
+{ "success": true, "message": "Removed from wishlist" }
+7. Admin Dashboard Endpoint  /api/admin
+Method
+Endpoint
+Auth
+Description
+GET
+/api/admin/dashboard
+Admin
+Get summary stats for the dashboard
+GET  /api/admin/dashboard   — Get dashboard summary data
+Success Response  200
+{ "success": true, "data": {
+  "totalProducts": 42,
+  "totalOrders": 318,
+  "totalUsers": 95,
+  "revenueThisMonth": 184500,
+  "recentOrders": [ { "id": "...", "customerName": "...", "totalAmount": 7200, "status": "PENDING", "createdAt": "..." } ],
+  "lowStockProducts": [ { "id": "...", "name": "...", "stockQuantity": 3 } ]
+} }
+recentOrders returns the latest 10 orders
+lowStockProducts returns products with stockQuantity <= 5
+8. Complete Endpoint Index
+Method
+Endpoint
+Auth
+Description
+POST
+/api/auth/register
+Public
+Register new customer
+POST
+/api/auth/login
+Public
+Customer login
+POST
+/api/auth/admin-login
+Public
+Admin login
+GET
+/api/products
+Public
+List products with filters
+GET
+/api/products/:id
+Public
+Get product detail
+GET
+/api/products/category/:cat
+Public
+Products by category
+POST
+/api/products
+Admin
+Create product
+PUT
+/api/products/:id
+Admin
+Update product
+DELETE
+/api/products/:id
+Admin
+Delete product
+POST
+/api/orders
+User
+Place order
+GET
+/api/orders/my-orders
+User
+My orders list
+GET
+/api/orders/my-orders/:id
+User
+My order detail
+GET
+/api/orders
+Admin
+All orders (admin)
+GET
+/api/orders/:id
+Admin
+Any order detail (admin)
+PATCH
+/api/orders/:id/status
+Admin
+Update order status
+GET
+/api/users/profile
+User
+My profile
+PUT
+/api/users/profile
+User
+Update profile
+PUT
+/api/users/password
+User
+Change password
+GET
+/api/users
+Admin
+All users (admin)
+GET
+/api/users/:id
+Admin
+User detail (admin)
+PATCH
+/api/users/:id/status
+Admin
+Block/unblock user
+GET
+/api/wishlist
+User
+Get wishlist
+POST
+/api/wishlist
+User
+Add to wishlist
+DELETE
+/api/wishlist/:productId
+User
+Remove from wishlist
+GET
+/api/admin/dashboard
+Admin
+Dashboard stats
+✦  End of Document  ✦
+Hand all four documents to Antigravity for a complete project context.
+
+
+--- d:\Full Stack\KarLi\Documentation\KarLiFashion_DatabaseSchema.docx ---
+✦  KARLI FASHION  ✦
+Database Schema Document
+Jewellery Ornaments E-Commerce Website
+Version 1.0  |  March 2026
+ORM: Prisma  |  Database: MongoDB Atlas (cloud)
+1. Overview
+This document defines the complete database schema for KarLi Fashion. It covers all collections, fields, data types, constraints, and relationships. The schema is written in Prisma Schema Language (PSL) and targets MongoDB Atlas as the cloud database.
+ORM
+Prisma v5.x
+Database
+MongoDB Atlas (free cloud tier — works in both dev and prod)
+Schema Apply
+npx prisma db push (no migration files with MongoDB)
+Schema File
+server/prisma/schema.prisma
+Apply Schema
+npx prisma db push (no migration files with MongoDB)
+Total Collections
+6 — User, Product, Order, OrderItem, Wishlist, StatusHistory
+2. Entity Relationship Summary
+From Table
+To Table
+Relation
+Description
+User
+Order
+One-to-Many
+A user can place many orders
+User
+Wishlist
+One-to-Many
+A user can save many products to wishlist
+Order
+OrderItem
+One-to-Many
+An order contains one or more items
+Product
+OrderItem
+One-to-Many
+A product can appear in many order items
+Product
+Wishlist
+One-to-Many
+A product can be wishlisted by many users
+Order
+StatusHistory
+One-to-Many
+An order has a history of status changes
+3. Prisma Schema File
+Save this as server/prisma/schema.prisma exactly as written below.
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+// ─── USER ───────────────────────────────────────────────
+model User {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  fullName     String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  role         Role      @default(CUSTOMER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders    Order[]
+  wishlist  Wishlist[]
+}
+// ─── PRODUCT ────────────────────────────────────────────
+model Product {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  description      String
+  category         Category
+  material         String
+  weightGrams      Float?
+  price            Float
+  stockQuantity    Int       @default(0)
+  images           String    // JSON array of image paths
+  status           ProductStatus @default(ACTIVE)
+  discountEnabled  Boolean   @default(false)
+  discountType     DiscountType?
+  discountValue    Float?
+  discountStart    DateTime?
+  discountEnd      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  orderItems  OrderItem[]
+  wishlist    Wishlist[]
+}
+// ─── ORDER ──────────────────────────────────────────────
+model Order {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  shippingName    String
+  shippingAddress String
+  shippingCity    String
+  shippingState   String
+  shippingPincode String
+  shippingPhone   String
+  paymentMethod   PaymentMethod @default(COD)
+  subtotal        Float
+  totalDiscount   Float     @default(0)
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user          User            @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  statusHistory StatusHistory[]
+}
+// ─── ORDER ITEM ─────────────────────────────────────────
+model OrderItem {
+  id               String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId          String  @db.ObjectId
+  productId        String  @db.ObjectId
+  productName      String  // snapshot at time of order
+  productImage     String  // snapshot at time of order
+  quantity         Int
+  unitPrice        Float   // original price at time of order
+  discountedPrice  Float   // price after discount (= unitPrice if no discount)
+  order    Order   @relation(fields: [orderId], references: [id])
+  product  Product @relation(fields: [productId], references: [id])
+}
+// ─── WISHLIST ────────────────────────────────────────────
+model Wishlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  productId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  @@unique([userId, productId]) // prevent duplicate wishlist entries
+}
+// ─── STATUS HISTORY ─────────────────────────────────────
+model StatusHistory {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String      @db.ObjectId
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+  order Order @relation(fields: [orderId], references: [id])
+}
+// ─── ENUMS ──────────────────────────────────────────────
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+enum Category {
+  RINGS
+  NECKLACES
+  EARRINGS
+  BRACELETS
+  BANGLES
+  OTHER
+}
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+enum DiscountType {
+  PERCENTAGE
+  FLAT
+}
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+enum PaymentMethod {
+  COD
+  CARD
+  UPI
+}
+4. Table-by-Table Reference
+4.1 User
+Stores all registered users including both customers and admins. Role distinguishes access level.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+fullName
+String
+NO
+—
+Full display name of the user
+email
+String
+NO
+—
+Unique login email address
+passwordHash
+String
+NO
+—
+bcrypt hashed password (never store plain text)
+phone
+String
+YES
+null
+Optional contact phone number
+role
+Role
+NO
+CUSTOMER
+CUSTOMER or ADMIN
+status
+UserStatus
+NO
+ACTIVE
+ACTIVE or BLOCKED (blocked users cannot log in)
+createdAt
+DateTime
+NO
+now()
+Account creation timestamp
+updatedAt
+DateTime
+NO
+auto
+Last update timestamp (auto-managed by Prisma)
+4.2 Product
+Central product catalogue. Discount fields are nullable and only relevant when discountEnabled is true.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+name
+String
+NO
+—
+Product display name
+description
+String
+NO
+—
+Full product description (long text)
+category
+Category
+NO
+—
+RINGS / NECKLACES / EARRINGS / BRACELETS / BANGLES / OTHER
+material
+String
+NO
+—
+e.g. Gold, Silver, Platinum, Rose Gold
+weightGrams
+Float
+YES
+null
+Weight in grams (optional)
+price
+Float
+NO
+—
+Original listed price in INR
+stockQuantity
+Int
+NO
+0
+Current units available in stock
+images
+String
+NO
+—
+JSON stringified array of image file paths
+status
+ProductStatus
+NO
+ACTIVE
+ACTIVE (visible to users) or INACTIVE (hidden)
+discountEnabled
+Boolean
+NO
+false
+Whether a discount is currently configured
+discountType
+DiscountType
+YES
+null
+PERCENTAGE or FLAT — null if no discount
+discountValue
+Float
+YES
+null
+e.g. 20 for 20% off, or 500 for flat ₹500 off
+discountStart
+DateTime
+YES
+null
+Discount validity start date
+discountEnd
+DateTime
+YES
+null
+Discount validity end date
+createdAt
+DateTime
+NO
+now()
+Record creation timestamp
+updatedAt
+DateTime
+NO
+auto
+Last update timestamp
+4.3 Order
+Each row is one customer order. Shipping address fields are stored directly (denormalised) to preserve the address at the time of purchase even if the user changes it later.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+userId
+String
+NO
+—
+Foreign key → User._id (ObjectId)
+shippingName
+String
+NO
+—
+Recipient name at time of order
+shippingAddress
+String
+NO
+—
+Street address line
+shippingCity
+String
+NO
+—
+City
+shippingState
+String
+NO
+—
+State
+shippingPincode
+String
+NO
+—
+Postal / PIN code
+shippingPhone
+String
+NO
+—
+Contact phone for delivery
+paymentMethod
+PaymentMethod
+NO
+COD
+COD / CARD / UPI
+subtotal
+Float
+NO
+—
+Sum of all items before discounts (INR)
+totalDiscount
+Float
+NO
+0
+Total amount saved via discounts (INR)
+totalAmount
+Float
+NO
+—
+Final amount: subtotal - totalDiscount
+status
+OrderStatus
+NO
+PENDING
+Current order status
+createdAt
+DateTime
+NO
+now()
+Order placement timestamp
+updatedAt
+DateTime
+NO
+auto
+Last update timestamp
+4.4 OrderItem
+One row per product per order. Product name and image are snapshotted here so the order history remains accurate even if the product is later edited or deleted.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+orderId
+String
+NO
+—
+Foreign key → Order._id (ObjectId)
+productId
+String
+NO
+—
+Foreign key → Product._id (ObjectId)
+productName
+String
+NO
+—
+Product name snapshot at order time
+productImage
+String
+NO
+—
+First image path snapshot at order time
+quantity
+Int
+NO
+—
+Number of units ordered
+unitPrice
+Float
+NO
+—
+Original product price at order time
+discountedPrice
+Float
+NO
+—
+Price after discount (same as unitPrice if no discount)
+4.5 Wishlist
+Junction table linking users to their saved products. The compound unique constraint prevents a user from saving the same product twice.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+userId
+String
+NO
+—
+Foreign key → User._id (ObjectId)
+productId
+String
+NO
+—
+Foreign key → Product._id (ObjectId)
+createdAt
+DateTime
+NO
+now()
+When the product was wishlisted
+Unique constraint on (userId, productId) — one entry per user per product
+4.6 StatusHistory
+Append-only log of every status change on an order. Never update or delete rows — only insert new ones. This builds a full audit trail of the order's lifecycle.
+Column
+Type
+Nullable
+Default
+Description
+id
+String
+NO
+auto() ObjectId
+Primary key — MongoDB ObjectId
+orderId
+String
+NO
+—
+Foreign key → Order._id (ObjectId)
+status
+OrderStatus
+NO
+—
+The new status set at this point
+note
+String
+YES
+null
+Optional admin note (e.g. 'Dispatched via BlueDart')
+createdAt
+DateTime
+NO
+now()
+Timestamp of this status change
+5. Enum Reference
+Role
+CUSTOMER, ADMIN
+UserStatus
+ACTIVE, BLOCKED
+Category
+RINGS, NECKLACES, EARRINGS, BRACELETS, BANGLES, OTHER
+ProductStatus
+ACTIVE, INACTIVE
+DiscountType
+PERCENTAGE, FLAT
+OrderStatus
+PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+PaymentMethod
+COD, CARD, UPI
+6. Discount Price Calculation
+The backend must calculate discountedPrice before saving an OrderItem or returning a product to the frontend. Use this logic:
+function calcDiscountedPrice(product) {
+  const today = new Date();
+  const isActive =
+    product.discountEnabled &&
+    product.discountStart <= today &&
+    product.discountEnd   >= today;
+  if (!isActive) return product.price;
+  if (product.discountType === 'PERCENTAGE') {
+    const saving = (product.price * product.discountValue) / 100;
+    return Math.max(0, product.price - saving);
+  }
+  if (product.discountType === 'FLAT') {
+    return Math.max(0, product.price - product.discountValue);
+  }
+  return product.price;
+}
+7. Seed Data (server/prisma/seed.js)
+The seed script creates one admin account, one test customer, and five sample jewellery products so the site has real content to display immediately after setup.
+Admin Email
+admin@karlifashion.com
+Admin Password
+Admin@1234 (hashed with bcrypt)
+Admin Role
+ADMIN
+Test User Email
+testuser@karlifashion.com
+Test Password
+User@1234 (hashed with bcrypt)
+Sample Products
+5 products across RINGS, NECKLACES, EARRINGS, BRACELETS, BANGLES
+Run seed: node prisma/seed.js from the server/ directory
+Re-seeding is safe — use upsert so duplicate rows are not created
+Change the admin password immediately after first login in production
+8. Migration Commands
+Apply schema to MongoDB
+npx prisma db push
+Re-apply after changes
+npx prisma db push (run again after any schema edit)
+Reset collections (dev)
+Drop collections manually in Atlas UI or Compass
+Generate Prisma client
+npx prisma generate
+Open Prisma Studio (GUI)
+npx prisma studio
+Run seed script
+node prisma/seed.js
+MongoDB does not support prisma migrate — always use prisma db push instead
+prisma db push is safe to run repeatedly — it syncs the schema without deleting data
+No migration files are generated with MongoDB — schema changes are applied directly
+✦  End of Document  ✦
+Hand this to Antigravity alongside the PRD and Tech Architecture documents.
+
+
+--- d:\Full Stack\KarLi\Documentation\KarliFashion_PRD.docx ---
+✦  KarLi Fashions ✦
+Product Requirements Document
+Jewellery Ornaments E-Commerce Website
+Version 1.0  |  March 2026
+Prepared for development via Antigravity Agent
+1. Project Overview
+KarLi Fashion is a full-stack e-commerce website for selling jewellery ornaments online. It consists of a customer-facing storefront and a secure admin panel for business management. The application is built with React and plain CSS, with a luxury aesthetic centered around gold, black, and white tones.
+Project Name
+KarLi Fashion — Jewellery E-Commerce Website
+Document Version
+1.0
+Frontend
+React.js (Single Page Application)
+Styling
+Plain CSS (no frameworks)
+Target Audience
+Online shoppers looking to purchase jewellery ornaments
+User Roles
+Customer (User) and Administrator (Admin)
+Auth Method
+JWT-based authentication with protected routes
+Date
+March 2026
+2. Design Guidelines
+2.1 Visual Identity
+The website should feel luxurious, elegant, and trustworthy. Every design decision should reinforce the premium nature of the jewellery products.
+Primary Color
+#D4AF37 — Gold (buttons, accents, highlights)
+Secondary Color
+#1A1A1A — Near Black (backgrounds, headers)
+Background Color
+#FFFDF7 — Off-White (page background)
+Text Color
+#2C2C2C — Dark Charcoal (body text)
+Accent Color
+#F5F0E8 — Warm Cream (card backgrounds, section fills)
+Font — Headings
+Playfair Display (serif, elegant)
+Font — Body
+Inter or Lato (clean, readable)
+Border Radius
+4px for cards, 2px for buttons (sharp and refined)
+Imagery Style
+High-resolution jewellery on clean white/dark backgrounds
+2.2 Layout Principles
+Ample whitespace around products to maintain a luxury feel
+Sticky navigation bar on all pages
+Responsive layout — must work on mobile, tablet, and desktop
+Product images should be large and prominent
+Use subtle hover transitions (0.2s ease) on cards and buttons
+3. User Roles & Permissions
+3.1 Customer (User)
+Can register and log in with email and password
+Can browse the product catalog without logging in
+Must be logged in to add items to cart, checkout, or use wishlist
+Can view and manage their own account details and order history
+Cannot access any admin routes
+3.2 Administrator (Admin)
+Logs in via a separate secure admin login page (/admin/login)
+Has full access to the admin dashboard
+Can manage all products, orders, users, and discounts
+Cannot access the customer storefront as an admin user
+Admin accounts are pre-created — no public admin registration
+4. Pages & Features — User Side
+4.1 Homepage
+Hero banner with a full-width image and tagline (e.g. 'Crafted for Eternity')
+Call-to-action button: 'Shop Now' linking to /products
+Featured categories section: Rings, Necklaces, Earrings, Bracelets, Bangles
+'New Arrivals' horizontal scroll section showing latest products
+'Best Sellers' section with top-rated products
+Footer with navigation links, social media icons, and contact info
+4.2 Product Catalog & Search (/products)
+Grid view of all products (3 columns desktop, 2 tablet, 1 mobile)
+Each product card shows: image, name, price, discount badge (if applicable), and Add to Wishlist icon
+Filter sidebar: filter by category, price range (slider), material (gold/silver/platinum), and rating
+Sort options: Newest, Price Low-High, Price High-Low, Most Popular
+Search bar at the top with real-time filtering as the user types
+URL query params should reflect active filters (e.g. /products?category=rings&sort=price_asc)
+Pagination or infinite scroll at the bottom
+4.3 Product Detail Page (/products/:id)
+Large product image gallery with thumbnail strip (support multiple images per product)
+Product name, description, price (original + discounted price shown side by side)
+Discount badge (e.g. '20% OFF') shown prominently if applicable
+Material, weight, dimensions details
+Add to Cart button and Add to Wishlist button
+Quantity selector
+'You May Also Like' section showing related products from the same category
+Customer reviews section (display only — no review submission in v1)
+4.4 User Authentication
+Register Page (/register)
+Fields: Full Name, Email, Password, Confirm Password
+Validation: email format, password minimum 8 characters, passwords must match
+On success: redirect to homepage, set JWT in localStorage
+Login Page (/login)
+Fields: Email, Password
+'Forgot Password' link (UI only in v1, no email integration)
+On success: redirect to previous page or homepage, set JWT in localStorage
+Error messages for wrong credentials
+4.5 Shopping Cart (/cart)
+List all items added to cart with image, name, price, quantity controls, and remove button
+Automatically apply discount if product has an active discount
+Show order summary: subtotal, discount savings, and total
+'Proceed to Checkout' button
+Cart data persists via localStorage for guest users; synced to backend for logged-in users
+4.6 Checkout Page (/checkout)
+Must be logged in to access (redirect to /login if not)
+Form sections: Shipping Address (Name, Address Line 1, City, State, Pincode, Phone)
+Order summary panel on the right showing all items and total
+Payment section: Cash on Delivery option (v1); card/UPI as placeholder UI
+Place Order button — creates an order record in the database
+On success: redirect to /order-confirmation with order ID
+4.7 Wishlist (/wishlist)
+Must be logged in to access
+Displays all saved products in a grid identical to the catalog page
+Each item has: Remove from Wishlist and Add to Cart buttons
+Empty state: 'Your wishlist is empty' with a link to browse products
+4.8 User Account (/account)
+Profile section: view and edit Full Name, Email, Phone
+Change password form
+Order History tab: list of past orders with status badge (Pending/Shipped/Delivered/Cancelled)
+Click on an order to see order details page with items, total, and shipping address
+5. Pages & Features — Admin Side
+All admin routes are prefixed with /admin. All routes except /admin/login require a valid admin JWT token. Unauthorized access redirects to /admin/login.
+5.1 Admin Login (/admin/login)
+Simple login form: Email, Password
+On success: redirect to /admin/dashboard, store admin JWT separately from user JWT
+Different styling from user login — dark, minimal admin aesthetic
+5.2 Admin Dashboard (/admin/dashboard)
+Summary cards at the top: Total Products, Total Orders, Total Users, Revenue This Month
+Recent Orders table (last 10 orders): Order ID, Customer Name, Total, Status, Date
+Low Stock Alerts: products with fewer than 5 units remaining
+Quick action buttons: Add New Product, View All Orders
+Left sidebar navigation: Dashboard, Products, Orders, Users, Discounts
+5.3 Product Management (/admin/products)
+Product List
+Table view: Product Image (thumbnail), Name, Category, Price, Discount, Stock, Status (Active/Inactive), Actions
+Search bar to filter products by name
+Filter by category dropdown
+Bulk delete option via checkboxes
+'Add New Product' button in top right
+Add Product (/admin/products/new)
+Fields: Product Name (required), Description (rich textarea), Category (dropdown: Rings/Necklaces/Earrings/Bracelets/Bangles/Other)
+Material (text: Gold/Silver/Platinum/Rose Gold), Weight (grams), Price (required), Stock Quantity
+Image Upload: support uploading up to 5 images (store as base64 or file path in v1)
+Status toggle: Active or Inactive
+Discount section: Enable Discount checkbox, Discount Type (Percentage / Flat Amount), Discount Value, Validity Dates (Start Date, End Date)
+Save and Publish / Save as Draft buttons
+Edit Product (/admin/products/:id/edit)
+Pre-filled form with all existing product data
+Same fields as Add Product
+Discount can be added, modified, or removed from this screen
+Delete Product button with confirmation modal
+5.4 Order Management (/admin/orders)
+Table: Order ID, Customer Name, Items Count, Total Amount, Payment Method, Status, Date
+Filter by status: All, Pending, Processing, Shipped, Delivered, Cancelled
+Search by Order ID or Customer Name
+Click on order row to view full order details
+Order Detail (/admin/orders/:id)
+Customer info, shipping address, items ordered with quantity and price
+Order timeline showing status history
+Status update dropdown: change order status with one click
+Invoice download button (PDF, v2 feature — show as disabled in v1)
+5.5 User Management (/admin/users)
+Table: User ID, Full Name, Email, Phone, Date Registered, Total Orders, Status (Active/Blocked)
+Search by name or email
+Click on user to view their profile and order history
+Block/Unblock user toggle (blocked users cannot log in)
+Admin cannot delete users — only block them
+5.6 Discount Management (/admin/discounts)
+Discounts are managed directly on individual products (see 5.3), but this page provides a centralized view.
+Table: Product Name, Discount Type, Discount Value, Start Date, End Date, Status (Active/Expired/Scheduled)
+Filter by status: All, Active, Expired, Scheduled
+Quick 'Deactivate' button to immediately remove a discount from a product
+'Edit' links to the product edit page
+6. Data Models
+6.1 User
+id
+Unique identifier (UUID or auto-increment)
+full_name
+String — full name of the user
+email
+String — unique, used for login
+password_hash
+String — bcrypt hashed password
+phone
+String — optional contact number
+role
+'customer' or 'admin'
+status
+'active' or 'blocked'
+created_at
+Timestamp
+6.2 Product
+id
+Unique identifier
+name
+String — product name
+description
+Text — full description
+category
+Enum: rings, necklaces, earrings, bracelets, bangles, other
+material
+String (Gold, Silver, Platinum, Rose Gold)
+weight_grams
+Float
+price
+Float — original listed price (INR)
+stock_quantity
+Integer
+images
+Array of image URLs or base64 strings
+status
+'active' or 'inactive'
+discount_enabled
+Boolean
+discount_type
+'percentage' or 'flat'
+discount_value
+Float — e.g. 20 for 20% or 500 for flat ₹500
+discount_start
+Date
+discount_end
+Date
+created_at
+Timestamp
+6.3 Order
+id
+Unique order ID
+user_id
+Foreign key to User
+items
+Array of { product_id, name, quantity, unit_price, discounted_price }
+shipping_address
+Object: name, address, city, state, pincode, phone
+payment_method
+'cod' or 'card' or 'upi'
+subtotal
+Float — before discounts
+total_discount
+Float — total savings
+total_amount
+Float — final amount paid
+status
+Enum: pending, processing, shipped, delivered, cancelled
+status_history
+Array of { status, timestamp, note }
+created_at
+Timestamp
+6.4 Wishlist
+id
+Unique identifier
+user_id
+Foreign key to User
+product_id
+Foreign key to Product
+created_at
+Timestamp
+7. Authentication & Routing Rules
+7.1 JWT Strategy
+On login (user or admin), server returns a signed JWT token
+Tokens are stored in localStorage: key 'user_token' for customers, 'admin_token' for admins
+Tokens expire after 7 days for users, 24 hours for admins
+All protected API calls include the token in the Authorization header: Bearer <token>
+7.2 Protected Routes
+Route
+Access Level
+Redirect if Unauthorized
+/cart
+Logged-in user
+/login
+/checkout
+Logged-in user
+/login
+/wishlist
+Logged-in user
+/login
+/account
+Logged-in user
+/login
+/admin/*
+Admin only
+/admin/login
+8. Discount Logic
+Each product can have at most one active discount at a time
+Discount is applied automatically if today's date is between discount_start and discount_end
+Discounted price = price - (price × discount_value / 100) for percentage type
+Discounted price = price - discount_value for flat type
+Discounted price is never shown below ₹0
+On the product card, show original price with strikethrough and discounted price in gold
+On cart and checkout, apply discounted price in calculations and show savings to the user
+Expired discounts are automatically inactive — no manual deactivation required
+9. Site Map
+User Side Routes
+/
+Homepage
+/products
+Product catalog with filters and search
+/products/:id
+Individual product detail page
+/login
+User login
+/register
+New user registration
+/cart
+Shopping cart (protected)
+/checkout
+Checkout page (protected)
+/order-confirmation
+Post-order success page (protected)
+/wishlist
+Saved wishlist (protected)
+/account
+User account and order history (protected)
+Admin Side Routes
+/admin/login
+Admin login
+/admin/dashboard
+Admin dashboard overview
+/admin/products
+Product list
+/admin/products/new
+Add new product
+/admin/products/:id/edit
+Edit existing product
+/admin/orders
+Order list
+/admin/orders/:id
+Order detail
+/admin/users
+User management
+/admin/discounts
+Discount overview
+10. Out of Scope (Version 1)
+Payment gateway integration (Razorpay, Stripe) — placeholder UI only
+Email notifications (order confirmation, shipping updates)
+Customer review/rating submission (display only)
+Coupon codes — only product-level discounts are in scope
+Multi-language or multi-currency support
+PDF invoice generation
+Third-party login (Google/Facebook OAuth)
+✦  End of Document  ✦
+Paste this PRD into Antigravity and say: 'Read this PRD carefully and begin building the project step by step.'
+
+
+--- d:\Full Stack\KarLi\Documentation\KarLiFashion_TechArchitecture.docx ---
+✦  KARLI FASHION  ✦
+Tech Stack & Architecture Document
+Jewellery Ornaments E-Commerce Website
+Version 2.0  |  March 2026
+Stack: MongoDB + Express.js + React.js + Node.js (MERN)
+1. Architecture Overview
+KarLi Fashion is built on the MERN stack — MongoDB, Express.js, React.js, and Node.js. The React frontend (SPA) communicates with an Express REST API over HTTP. Data is stored in MongoDB Atlas, a free cloud-hosted database that persists across deployments. Authentication uses JSON Web Tokens (JWT) stored in the browser's localStorage.
+Stack
+MERN — MongoDB, Express, React, Node.js
+Architecture
+Client-Server (SPA + REST API)
+Frontend
+React.js — Single Page Application
+Backend
+Node.js with Express.js
+Database
+MongoDB Atlas (free cloud tier)
+ODM
+Mongoose — MongoDB object modelling for Node.js
+Auth
+JWT (JSON Web Tokens) via jsonwebtoken package
+Password Hashing
+bcryptjs
+File Storage
+Local /uploads folder served statically (dev)
+API Style
+RESTful JSON API
+Port — Frontend
+http://localhost:3000 (Vite dev server)
+Port — Backend
+http://localhost:5000 (Express server)
+2. Full Tech Stack
+Layer
+Technology
+Version
+Purpose
+Frontend
+React.js
+^18.x
+UI framework — Single Page Application
+Frontend
+React Router DOM
+^6.x
+Client-side page routing
+Frontend
+Axios
+^1.x
+HTTP requests to the Express API
+Frontend
+React Context API
+Built-in
+Global state — cart, auth, wishlist
+Frontend
+CSS Modules
+Built-in
+Scoped per-component CSS styling
+Frontend
+Vite
+^5.x
+Frontend build tool and dev server
+Backend
+Node.js
+^20.x
+JavaScript runtime environment
+Backend
+Express.js
+^4.x
+HTTP server, routing, middleware
+Backend
+Mongoose
+^8.x
+MongoDB ODM — models, validation, queries
+Backend
+MongoDB Atlas
+Cloud
+Free cloud-hosted NoSQL database
+Backend
+jsonwebtoken
+^9.x
+JWT signing and verification
+Backend
+bcryptjs
+^2.x
+Password hashing and comparison
+Backend
+cors
+^2.x
+Cross-origin request handling
+Backend
+dotenv
+^16.x
+Environment variable management
+Backend
+multer
+^1.x
+Multipart file upload handling
+Backend
+express-validator
+^7.x
+Request body validation middleware
+Dev Tools
+nodemon
+^3.x
+Auto-restart server on file changes
+Dev Tools
+ESLint
+^8.x
+Code linting and style enforcement
+3. Folder Structure
+The project uses a monorepo layout with two top-level folders — /client for the React frontend and /server for the Express + MongoDB backend.
+3.1 Root
+karli-fashion/
+├── client/               # React frontend (Vite)
+├── server/               # Express + Mongoose backend
+├── .gitignore
+└── README.md
+3.2 Client (Frontend)
+client/
+├── public/
+│   └── favicon.ico
+├── src/
+│   ├── assets/           # Static images, icons, fonts
+│   ├── components/       # Reusable UI components
+│   │   ├── Navbar/
+│   │   │   ├── Navbar.jsx
+│   │   │   └── Navbar.module.css
+│   │   ├── Footer/
+│   │   ├── ProductCard/
+│   │   ├── CartItem/
+│   │   ├── ProtectedRoute/
+│   │   └── AdminRoute/
+│   ├── pages/
+│   │   ├── Home/
+│   │   ├── Products/
+│   │   ├── ProductDetail/
+│   │   ├── Login/
+│   │   ├── Register/
+│   │   ├── Cart/
+│   │   ├── Checkout/
+│   │   ├── OrderConfirmation/
+│   │   ├── Wishlist/
+│   │   ├── Account/
+│   │   └── admin/
+│   │       ├── AdminLogin/
+│   │       ├── Dashboard/
+│   │       ├── Products/
+│   │       ├── Orders/
+│   │       ├── Users/
+│   │       └── Discounts/
+│   ├── context/
+│   │   ├── AuthContext.jsx
+│   │   ├── CartContext.jsx
+│   │   └── WishlistContext.jsx
+│   ├── hooks/
+│   │   ├── useAuth.js
+│   │   └── useCart.js
+│   ├── services/         # All Axios API calls live here
+│   │   ├── api.js        # Axios base instance with auth header
+│   │   ├── authService.js
+│   │   ├── productService.js
+│   │   ├── orderService.js
+│   │   └── wishlistService.js
+│   ├── utils/
+│   │   ├── formatPrice.js
+│   │   └── calcDiscount.js
+│   ├── styles/
+│   │   ├── global.css
+│   │   └── variables.css
+│   ├── App.jsx
+│   └── main.jsx
+├── index.html
+├── vite.config.js
+└── package.json
+3.3 Server (Backend)
+server/
+├── src/
+│   ├── models/           # Mongoose schema definitions
+│   │   ├── User.js
+│   │   ├── Product.js
+│   │   ├── Order.js
+│   │   └── Wishlist.js
+│   ├── controllers/      # Business logic for each route
+│   │   ├── authController.js
+│   │   ├── productController.js
+│   │   ├── orderController.js
+│   │   ├── userController.js
+│   │   └── wishlistController.js
+│   ├── routes/           # Express route definitions
+│   │   ├── authRoutes.js
+│   │   ├── productRoutes.js
+│   │   ├── orderRoutes.js
+│   │   ├── userRoutes.js
+│   │   └── wishlistRoutes.js
+│   ├── middleware/
+│   │   ├── authMiddleware.js   # Verify JWT, attach user to req
+│   │   ├── adminMiddleware.js  # Check req.user.role === 'admin'
+│   │   └── errorHandler.js    # Global error response handler
+│   ├── utils/
+│   │   └── generateToken.js   # JWT signing helper
+│   └── app.js            # Express app setup and middleware stack
+├── uploads/              # Uploaded product images (served statically)
+├── seed.js               # Script to populate DB with sample data
+├── .env                  # Environment variables (never commit this)
+├── server.js             # Entry point — connects to MongoDB, starts server
+└── package.json
+4. MongoDB Atlas Setup
+MongoDB Atlas is the cloud database. Follow these steps once before starting development.
+4.1 Create a Free Cluster
+Go to https://cloud.mongodb.com and create a free account
+Create a new project named 'karli-fashion'
+Create a free cluster — choose the M0 (free) tier, select the region closest to you
+Create a database user: username 'karli-admin', set a strong password, save it
+Under Network Access, click 'Add IP Address' → choose 'Allow Access from Anywhere' (0.0.0.0/0) for development
+Go to Connect → Drivers → copy the connection string
+4.2 Connection String Format
+mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/karlifashion?retryWrites=true&w=majority
+Replace <username> and <password> with your Atlas credentials
+'karlifashion' at the end is the database name — Atlas creates it automatically on first write
+Paste this string as MONGO_URI in your server .env file
+4.3 Connecting in server.js
+const mongoose = require('mongoose');
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('MongoDB Atlas connected');
+    app.listen(process.env.PORT, () =>
+      console.log(`Server running on port ${process.env.PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
+5. Authentication Flow
+5.1 User Registration & Login
+User submits email + password to POST /api/auth/register or POST /api/auth/login
+Backend hashes password with bcryptjs on register, compares hash on login
+On success, server signs a JWT: payload { userId, role: 'customer' }, signed with JWT_SECRET
+Token returned in response body, stored in localStorage as 'karli_user_token'
+All protected requests include header: Authorization: Bearer <token>
+authMiddleware.js verifies and decodes the token, attaches user to req.user
+5.2 Admin Login
+Admin posts to POST /api/auth/admin-login (separate endpoint)
+Backend checks role === 'admin' before issuing token
+Admin JWT stored separately as 'karli_admin_token' in localStorage
+adminMiddleware.js checks valid JWT AND req.user.role === 'admin'
+5.3 Frontend Route Protection
+ProtectedRoute.jsx wraps all customer-only pages — checks 'karli_user_token', redirects to /login if missing or expired
+AdminRoute.jsx wraps all /admin/* pages — checks 'karli_admin_token', redirects to /admin/login if invalid
+6. Frontend State Management
+No Redux or external state library. All global state is handled with React Context API and the useState / useReducer hooks.
+AuthContext
+Stores logged-in user object, token, and login/logout functions. Reads from localStorage on app load to persist sessions across refreshes.
+CartContext
+Stores cart items array with add, remove, and update quantity functions. Persists to localStorage for all users.
+WishlistContext
+Stores wishlist product IDs. Fetched from the API on login and cleared on logout.
+7. Frontend ↔ Backend Communication
+7.1 Axios Base Instance (src/services/api.js)
+One shared Axios instance is created with the base URL and an interceptor that automatically attaches the JWT to every request.
+import axios from 'axios';
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+});
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('karli_user_token')
+    || localStorage.getItem('karli_admin_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+export default api;
+7.2 Service Files
+authService.js — login(), register(), adminLogin()
+productService.js — getProducts(), getProductById(), searchProducts(), adminCreateProduct(), adminUpdateProduct(), adminDeleteProduct()
+orderService.js — createOrder(), getMyOrders(), getOrderById(), adminGetAllOrders(), adminUpdateOrderStatus()
+wishlistService.js — getWishlist(), addToWishlist(), removeFromWishlist()
+userService.js — getProfile(), updateProfile(), adminGetAllUsers(), adminToggleUserStatus()
+8. CSS Architecture
+Plain CSS only — no Tailwind, no Bootstrap. CSS Modules for component-level scoping and a global stylesheet for resets and design tokens via CSS custom properties.
+8.1 CSS Custom Properties (src/styles/variables.css)
+:root {
+  /* Colours */
+  --color-gold:        #D4AF37;
+  --color-gold-dark:   #A8860C;
+  --color-black:       #1A1A1A;
+  --color-bg:          #FFFDF7;
+  --color-text:        #2C2C2C;
+  --color-cream:       #F5F0E8;
+  --color-muted:       #888888;
+  --color-error:       #C0392B;
+  --color-success:     #27AE60;
+  /* Typography */
+  --font-heading:      'Playfair Display', serif;
+  --font-body:         'Inter', sans-serif;
+  /* Spacing & Shape */
+  --border-radius:     4px;
+  --transition:        0.2s ease;
+  --shadow-card:       0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-hover:      0 6px 24px rgba(0, 0, 0, 0.14);
+}
+8.2 CSS Modules
+Every component folder has a matching ComponentName.module.css
+Import as: import styles from './ProductCard.module.css'
+Apply as: className={styles.card}
+Vite handles CSS Modules natively — no extra config needed
+8.3 Responsive Breakpoints
+Mobile
+max-width: 480px — single column, hamburger menu, stacked layout
+Tablet
+max-width: 768px — two column product grid, condensed sidebar
+Desktop
+min-width: 769px — three column grid, full navigation, visible filters
+9. Environment Variables
+9.1 Server — server/.env
+PORT=5000
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/karlifashion?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key_here
+JWT_ADMIN_SECRET=your_admin_jwt_secret_here
+JWT_EXPIRES_IN=7d
+JWT_ADMIN_EXPIRES_IN=24h
+UPLOAD_DIR=./uploads
+9.2 Client — client/.env
+VITE_API_BASE_URL=http://localhost:5000/api
+Never commit .env files to Git — add both to .gitignore
+For production, set these as environment variables in your hosting platform (Render, Railway, etc.)
+10. Getting Started — Scripts
+10.1 Install & Run
+# Clone the repo and install dependencies
+cd client && npm install
+cd ../server && npm install
+# Add your .env files (see Section 9)
+# Seed the database with sample data
+cd server && node seed.js
+# Run both servers (two separate terminals)
+# Terminal 1 — Backend:
+cd server && npm run dev      # nodemon, starts on port 5000
+# Terminal 2 — Frontend:
+cd client && npm run dev      # Vite, starts on port 3000
+10.2 Useful Scripts
+npm run dev
+Start dev server — nodemon (backend) or Vite (frontend)
+npm run build
+Build React app for production (client only)
+node seed.js
+Seed MongoDB with admin account and sample products
+11. Deployment Overview
+Since MongoDB is already in the cloud (Atlas), deploying is straightforward. The backend needs a hosting platform that runs Node.js, and the frontend can be deployed as static files.
+Backend hosting
+Render.com (free tier) or Railway.app — supports Node.js, set env vars in dashboard
+Frontend hosting
+Vercel or Netlify — drag and drop the client/dist folder after npm run build
+Database
+MongoDB Atlas is already cloud-hosted — no extra setup needed for prod
+Images (prod)
+Move to Cloudinary (free tier) or AWS S3 before deploying — local /uploads won't persist on Render
+After deploying the backend, update VITE_API_BASE_URL in the frontend .env to point to the live backend URL instead of localhost
+In MongoDB Atlas, update Network Access to allow your backend server's IP address (or keep 0.0.0.0/0 for simplicity)
+12. Code Conventions
+Component filenames: PascalCase — ProductCard.jsx, AdminDashboard.jsx
+Hook filenames: camelCase with 'use' prefix — useAuth.js, useCart.js
+CSS Module files match their component — ProductCard.module.css
+Mongoose model filenames: PascalCase singular — User.js, Product.js, Order.js
+Route files: camelCase plural — productRoutes.js, orderRoutes.js
+Controller files: camelCase — productController.js
+All API service functions named as verb + noun — getProducts(), createOrder()
+All monetary values stored and handled in INR (rupees) as Numbers
+All API responses follow: { success: true/false, data: {}, message: '' }
+HTTP status codes: 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Server Error
+✦  End of Document  ✦
+Hand this to Antigravity alongside the PRD and Database Schema documents.
+
+
+--- d:\Full Stack\KarLi\Documentation\KarLiFashion_UIUXWireframe.docx ---
+✦  KARLI FASHION  ✦
+UI/UX Wireframe Spec
+Jewellery Ornaments E-Commerce Website
+Version 1.0  |  March 2026
+Vibe: Bold & Glamorous  |  Palette: Black & Gold
+1. Design Identity
+KarLi Fashion is bold, dramatic, and unapologetically glamorous. Every screen should feel like opening a luxury jewellery box — dark backgrounds that make gold pop, rich typography that commands attention, and layouts that let the jewellery be the hero. This is not a minimal white website. It is rich, layered, and visually powerful.
+1.1 Colour Palette
+Deep Black
+#1A1A1A
+Signature Gold
+#D4AF37
+Dark Gold
+#A8860C
+Warm Cream
+#F5F0E8
+Charcoal
+#2C2C2C
+Off White
+#FFFDF7
+Deep Black (#1A1A1A) — primary background for hero sections, navbar, footer, and admin panel
+Signature Gold (#D4AF37) — all CTAs, highlights, borders, badge text, price labels, hover states
+Dark Gold (#A8860C) — hover state for gold buttons, pressed states
+Warm Cream (#F5F0E8) — product card backgrounds, section alternates, input fields
+Charcoal (#2C2C2C) — body text on light backgrounds, secondary text
+Off White (#FFFDF7) — main page background for content sections
+1.2 Typography
+Display / Hero Text
+Cormorant Garamond — 64–80px, bold, uppercase tracking, gold or white
+Page Headings (H1)
+Cormorant Garamond — 48px, bold, dark or gold
+Section Headings (H2)
+Playfair Display — 32px, semi-bold, dark
+Card Titles / H3
+Playfair Display — 22px, semi-bold
+Body Text
+Inter — 16px, regular, charcoal #2C2C2C
+Small Labels / Meta
+Inter — 13px, uppercase, letter-spacing 0.1em, muted gold
+Price / Numbers
+Cormorant Garamond — 20px, bold, gold
+Buttons
+Inter — 14px, bold, uppercase, letter-spacing 0.12em
+Agent Note: Load Cormorant Garamond and Playfair Display from Google Fonts. Add to index.html <head> before any CSS.
+1.3 Spacing & Shape
+Base unit
+8px — all spacing is a multiple of 8
+Section padding
+80px top/bottom on desktop, 48px on mobile
+Card padding
+24px internal padding
+Border radius
+2px on buttons and inputs (sharp, luxury feel), 4px on cards
+Border style
+1px solid gold (#D4AF37) for decorative borders and dividers
+Max content width
+1280px centered with auto margins
+Grid gutter
+24px between product cards
+1.4 Premium UI Elements
+Sticky navbar with backdrop-filter: blur(16px) and background: rgba(26,26,26,0.85) — glass dark effect
+Hover animations on product cards — card lifts with translateY(-6px) and box-shadow deepens over 0.25s ease
+Smooth page transitions — fade-in on route change using opacity 0 → 1 over 0.3s
+Floating cart icon — fixed bottom-right, gold circle, white cart icon, red badge with item count
+Gold shimmer dividers between sections using a thin 1px line with gold color
+All buttons have a subtle gold glow on hover: box-shadow 0 0 16px rgba(212,175,55,0.4)
+Form inputs: dark background (#2C2C2C), gold bottom border only (1px), white text — underline style
+2. Global Components
+2.1 Navbar
+Height
+72px fixed — shrinks to 60px on scroll with smooth transition
+Background
+rgba(26,26,26,0.85) with backdrop-filter: blur(16px) — sticky glass dark effect
+Left
+KarLi Fashion logo — Cormorant Garamond, 28px, gold, bold. On click: navigate to /
+Centre
+Nav links: Home, Collections, About — Inter 14px uppercase, white, gold underline on hover. Hidden on mobile.
+Right
+Search icon (magnifier), Wishlist icon (heart), User icon (person), Cart icon (bag) — all white, 22px. Cart icon shows gold badge with item count. On mobile: hamburger menu icon.
+Mobile menu
+Full-screen overlay on dark background, nav links stacked vertically centred, gold close button top-right, links animate in from top with stagger
+Border
+1px solid rgba(212,175,55,0.2) bottom border — barely visible gold line
+Agent Note: The navbar must be the first element rendered in App.jsx and present on all pages except /admin/* routes.
+2.2 Footer
+Background
+Deep Black #1A1A1A, 3 columns on desktop, stacked on mobile
+Column 1
+KarLi Fashion logo + tagline 'Crafted to be Remembered' in italic cream. Social icons below: Instagram, Facebook, Pinterest — gold on hover
+Column 2
+Quick Links heading in gold, links: Home, Collections, My Account, Track Order — white, gold on hover
+Column 3
+Contact heading in gold. Email, Phone, City text in cream. Newsletter input + Subscribe button (gold bg, black text)
+Bottom bar
+Thin gold divider line. Below: copyright text left, 'Secure Payments' right — both in muted cream 13px
+2.3 Product Card
+Size
+Fixed height 420px on desktop. Card background: Warm Cream #F5F0E8. Border-radius 4px.
+Image zone
+Top 65% of card — product image fills the area with object-fit: cover. On hover: image scales to 108% over 0.4s ease (zoom in place).
+Discount badge
+Top-left corner of image — gold background, black bold text e.g. '20% OFF'. Only shown if discount is active.
+Wishlist icon
+Top-right corner of image — heart icon, white with dark shadow. On click: toggles filled gold heart. Smooth fill transition.
+Content zone
+Bottom 35% of card — 24px padding. Product name in Playfair Display 16px bold charcoal. Category in Inter 12px uppercase muted gold below name.
+Price row
+Original price with line-through in muted grey (if discounted). Discounted price bold gold 20px Cormorant Garamond. Shown side by side.
+CTA
+Full-width 'Add to Cart' button at the very bottom of card — black background, gold text, gold border. On hover: gold background, black text. Transition 0.2s.
+Card hover
+Entire card lifts: transform translateY(-6px), box-shadow 0 12px 40px rgba(0,0,0,0.18). Duration 0.25s ease.
+Agent Note: Product card is a reusable component used on Homepage, Catalog, Wishlist, and Product Detail related section.
+2.4 Floating Cart Button
+Position
+Fixed — bottom: 32px, right: 32px. Always visible above all content (z-index: 999).
+Shape
+Circle — 60px diameter. Background: Signature Gold #D4AF37. Shadow: 0 4px 20px rgba(212,175,55,0.5).
+Icon
+Shopping bag icon — black, 26px, centred.
+Badge
+Top-right of circle — 22px red circle (#E74C3C) with white bold count number. Hidden when cart is empty.
+Hover
+Scale to 1.08, shadow deepens. Duration 0.2s ease.
+On click
+Navigate to /cart
+3. Homepage  /
+3.1 Hero Section
+Height
+100vh (full viewport height) on desktop, 80vh on mobile
+Background
+Full-width high-resolution jewellery image (dark/moody setting). Overlay: linear-gradient from rgba(0,0,0,0.55) left to transparent right.
+Left content
+Positioned left-centre. Small label above heading: 'NEW COLLECTION 2026' — Inter 13px gold uppercase tracked. Main heading: 2-line Cormorant Garamond 72px bold white e.g. 'Wear Gold. / Be Remembered.' Second line in gold.
+Subtext
+Inter 18px cream below heading — 'Handcrafted jewellery for every occasion.'
+CTAs
+Two buttons side by side: 'Shop Now' — gold background, black text, 52px height. 'View Collections' — transparent, gold border, gold text. 16px gap between them.
+Scroll hint
+Animated downward chevron at bottom centre — gold, bounces gently in loop
+Mobile
+Content centred, heading scales to 42px, buttons stack vertically
+Agent Note: Use a dark jewellery lifestyle image as the hero background. The overlay ensures text remains readable at all times.
+3.2 Marquee Strip
+Height
+48px
+Background
+Signature Gold #D4AF37
+Content
+Continuously scrolling text — black Inter 13px bold uppercase: '✦ FREE SHIPPING ABOVE ₹2000  ✦ HANDCRAFTED IN INDIA  ✦ CERTIFIED PURITY  ✦ EASY RETURNS' — loops infinitely left to right
+3.3 Category Grid
+Heading
+Section heading centred: 'Shop by Category' — Playfair Display 36px dark. Gold underline decoration (80px wide, 2px, centred below text).
+Layout
+5 category tiles in a row on desktop (Rings, Necklaces, Earrings, Bracelets, Bangles). 2 columns on mobile.
+Each tile
+Square aspect ratio. Dark background image of that jewellery type. Overlay darkens to 40%. Category name centred in Cormorant Garamond 22px bold white uppercase. On hover: overlay lightens, gold border appears on tile edges, name turns gold. Smooth 0.3s transition.
+On click
+Navigate to /products?category=<name>
+3.4 Featured / New Arrivals
+Heading
+Left-aligned: 'New Arrivals' in Playfair Display 36px. Gold thin line decoration to the right of heading stretching to edge.
+Subheading
+Inter 16px muted — 'The latest additions to our collection'
+Layout
+Horizontal scroll row on mobile, 4-column grid on desktop. Shows 8 newest products using the standard Product Card component.
+CTA
+Centred 'View All' button below the grid — outlined gold style
+3.5 Best Sellers
+Background
+Full-width section with background color #1A1A1A (dark) for contrast against previous section
+Heading
+Centred: 'Best Sellers' — Cormorant Garamond 42px gold. Subtitle in cream Inter 16px below.
+Layout
+4 product cards in a row — same Product Card component but on dark background so card cream color pops.
+CTA
+Centred 'Explore More' button — gold background, black text
+3.6 Brand Promise Banner
+Background
+Warm Cream #F5F0E8
+Layout
+4 columns, each with an icon, bold heading, and short description
+Column 1
+✦ icon — 'Hallmark Certified' — 'Every piece comes with purity certification'
+Column 2
+✦ icon — 'Handcrafted' — 'Artisan-made with decades of tradition'
+Column 3
+✦ icon — 'Free Shipping' — 'On all orders above ₹2000'
+Column 4
+✦ icon — 'Easy Returns' — '7-day hassle-free return policy'
+4. Product Catalog  /products
+4.1 Page Header
+Background
+Dark black strip — 200px tall. Heading: 'Our Collections' centred Cormorant Garamond 52px gold. Breadcrumb below: Home > Collections in small cream Inter.
+4.2 Layout
+Structure
+Two-column layout: filter sidebar 280px wide on left, product grid fills remaining width on right
+Mobile
+Sidebar hidden by default — 'Filters' button at top opens a bottom sheet drawer overlay with all filter controls
+4.3 Filter Sidebar
+Background
+Warm Cream #F5F0E8. Sticky on scroll (stays in view as user scrolls products).
+Search bar
+Top of sidebar — full-width input, dark bg, gold underline border, magnifier icon right. Live filters as user types.
+Category
+Expandable section — checkbox list: All, Rings, Necklaces, Earrings, Bracelets, Bangles. Checkboxes styled with gold accent.
+Price range
+Dual-handle range slider — gold track, dark handle. Min/max INR values shown below slider updating live.
+Material
+Checkbox list: Gold, Silver, Platinum, Rose Gold
+Sort by
+Dropdown select: Newest, Price Low–High, Price High–Low, Most Popular. Gold border on focus.
+Clear all
+Small gold text link at top right of sidebar — resets all filters
+4.4 Product Grid
+Layout
+3 columns desktop, 2 tablet, 1 mobile. 24px gutter.
+Empty state
+If no results: centred gold ✦ icon, heading 'No jewellery found', subtext 'Try adjusting your filters', and a 'Clear Filters' button.
+Loading
+Skeleton cards — cream rectangle blocks pulsing (shimmer animation) while products are being fetched from API.
+Pagination
+Centred row of page number buttons at bottom — current page is gold filled circle, others are outlined. Previous/Next arrows flank the numbers.
+5. Product Detail Page  /products/:id
+5.1 Layout
+Structure
+Two-column on desktop: image gallery left (55%), product info right (45%). Single column stacked on mobile.
+Background
+Off-white #FFFDF7 page background.
+5.2 Image Gallery
+Main image
+Large square image — border: 1px solid #D4AF37. Shows selected thumbnail.
+Thumbnails
+Row of up to 5 small square thumbnails below main image. Selected thumbnail has gold border 2px. On click: swaps main image with smooth crossfade.
+Discount badge
+Top-left of main image — same gold badge as Product Card
+5.3 Product Info Panel
+Breadcrumb
+Home > Collections > Rings — Inter 13px muted, gold on hover
+Name
+Cormorant Garamond 42px bold dark — product name
+Meta row
+Below name: category tag (gold outlined pill) and material tag (cream pill). Inter 12px.
+Price block
+Original price struck through in grey (if discounted). Discounted price in Cormorant Garamond 36px gold bold. Savings amount in small green text: 'You save ₹900'.
+Description
+Inter 16px charcoal, line-height 1.7. Expandable if long — 'Read more' gold link.
+Details
+Small table: Weight, Material, Category — Inter 14px. Left col muted, right col bold.
+Quantity
+Label 'Quantity' above. Row with minus button — number — plus button. Buttons are square 36px, gold border, gold text.
+Add to cart
+Full-width 52px button — Gold background, black bold uppercase Inter text 'Add to Cart'. On hover: gold glow shadow. Below it: a smaller outlined button 'Add to Wishlist' with heart icon.
+Stock
+Below buttons: 'In Stock' in green if stockQuantity > 5, 'Only 3 left!' in amber if <= 5, 'Out of Stock' in red disabling the cart button.
+5.4 You May Also Like
+Layout
+Full-width section below the main product — dark #1A1A1A background. Heading 'You May Also Like' in gold Cormorant Garamond 36px. 4 product cards in a row — same card component.
+6. Auth Pages
+6.1 Login  /login  &  Register  /register
+Layout
+Full page split — left half: full-height dark image of jewellery with gold overlay text 'Welcome Back' (login) or 'Join KarLi Fashion' (register) in Cormorant Garamond 52px white. Right half: the form.
+Form bg
+Off-white #FFFDF7. Centred vertically. Max-width 420px.
+Form heading
+Playfair Display 32px dark. Subtext Inter 15px muted below.
+Inputs
+Full-width, dark charcoal background, gold bottom-border only (underline style), white text, gold label floats up on focus. 16px Inter. 48px height.
+Button
+Full-width 52px — Gold background, black bold uppercase text. Glow on hover.
+Toggle link
+Below button: 'Don't have an account? Register here' — Inter 14px, gold link. Or vice versa for register page.
+Mobile
+Left image hidden. Form fills full screen with dark overlay background.
+Agent Note: The split-screen layout is a high-impact premium pattern. Ensure the left image is always visible on desktop.
+7. Cart Page  /cart
+Header
+Dark black strip — 'Your Cart' heading gold Cormorant Garamond 48px centred. Item count in cream below.
+Layout
+Two-column on desktop: cart items list left (65%), order summary right (35%). Stacked on mobile.
+Cart item row
+Each item: product thumbnail (80px square) left. Name + category text centre. Quantity controls (−, number, +). Unit price and discounted price. Remove icon (×) right — gold on hover. Subtle gold bottom border between rows.
+Empty cart
+Centred: large gold ✦, 'Your cart is empty', subtext, gold 'Start Shopping' button
+Summary box
+Warm cream bg, gold border. Rows: Subtotal, Discount savings (green), Total in bold gold large. 'Proceed to Checkout' button — full width gold. Below: gold lock icon + 'Secure Checkout' text in small muted Inter.
+8. Checkout Page  /checkout
+Header
+Same dark strip as cart — 'Checkout' heading
+Layout
+Two-column: form left (60%), order summary right (40%)
+Form sections
+Two sections with gold numbered headings: '01 — Shipping Address' and '02 — Payment Method'. Each section card has cream background, gold top border accent.
+Shipping form
+Fields: Full Name, Address, City, State, Pincode, Phone. Underline-style inputs same as auth pages.
+Payment
+Radio button cards for COD, Card, UPI. Selected card gets gold border and gold filled radio. Card/UPI fields appear below on select (greyed out with 'Coming Soon' badge for v1).
+Summary
+Same summary box as Cart page — shows all items, totals, discount. Non-editable.
+Place order
+Large full-width gold button: 'Place Order'. Below: Inter 13px muted text 'By placing your order you agree to our Terms & Conditions'.
+9. Wishlist Page  /wishlist
+Header
+Dark strip — 'My Wishlist' heading gold. Item count in cream.
+Layout
+Same 3-column product grid as catalog. Each card has a filled gold heart icon (since all items are wishlisted).
+Card extras
+Below the standard card CTA: a secondary 'Remove' text link in small muted red — removes item from wishlist.
+Empty state
+Gold heart icon large, 'Your wishlist is empty', 'Save the pieces you love' subtext, gold 'Browse Collections' button.
+10. Account Page  /account
+Layout
+Two-column: left sidebar 260px for navigation, right panel for content.
+Sidebar
+Dark #1A1A1A background. User avatar initials circle in gold at top. User name and email in white below. Nav links: My Profile, My Orders, Change Password — white text, active link has gold left border and gold text.
+Profile tab
+Form with current values pre-filled: Full Name, Email, Phone. Same underline input style. 'Save Changes' gold button.
+Orders tab
+List of orders — each row: Order ID (gold), date, item count, total, status badge (colour-coded pill: green=Delivered, amber=Pending/Processing, blue=Shipped, red=Cancelled). Chevron right to expand order detail. On expand: shows order items with thumbnails, prices, and shipping address.
+Password tab
+Three inputs: Current Password, New Password, Confirm New Password. 'Update Password' gold button.
+11. Admin Panel  /admin/*
+The admin panel has its own distinct visual language — still dark and gold but more structured and data-focused. No decorative elements. Clean, dense, and efficient.
+11.1 Admin Layout Shell
+Sidebar
+Fixed 240px left sidebar. Background: #0D0D0D (darker than main site). KarLi Fashion Admin logo top in gold. Nav items with icons: Dashboard, Products, Orders, Users, Discounts. Active item: gold left border, gold text, slight gold background tint. Collapsed to icon-only on smaller screens.
+Top bar
+60px height. White background. Page title left bold. Right: admin user name + avatar initials circle in gold. Logout button — small red text.
+Content area
+Off-white #FFFDF7 background. 32px padding. Max-width: full remaining width.
+11.2 Dashboard
+Stat cards
+4 cards in a row — each: cream bg, gold top border accent (4px), icon in gold circle top-right, large bold number in dark Cormorant Garamond, label in small uppercase muted Inter below. Cards: Total Products, Total Orders, Total Users, Revenue This Month (₹).
+Recent orders
+White card with gold top border. Table: Order ID, Customer, Amount, Status badge, Date. Last 10 orders. 'View All' gold link top-right of card.
+Low stock
+White card with amber top border. List of products with stock <= 5. Each row: product name, stock count in red bold, 'Edit' gold link.
+11.3 Product Management
+Toolbar
+Search input left. Category filter dropdown. 'Add New Product' gold button top-right.
+Table
+Columns: checkbox, Image (50px thumbnail), Name, Category, Price, Discount, Stock, Status (Active/Inactive pill), Actions (Edit pencil icon, Delete trash icon). Row hover: cream bg tint.
+Add/Edit form
+Full-page form view (not modal). Two-column layout: main fields left, image upload + discount config right. Discount section collapses when toggle is off. Save and Cancel buttons fixed at bottom.
+Image upload
+Drag-and-drop zone with dashed gold border. Shows preview thumbnails of uploaded images. Up to 5 images. Remove × on each thumbnail.
+11.4 Order Management
+Filters
+Status tabs across the top: All | Pending | Processing | Shipped | Delivered | Cancelled — active tab underlined gold.
+Table
+Order ID, Customer Name, Items, Total, Payment, Status badge, Date, Actions (View eye icon).
+Order detail
+Side panel slides in from right (or full-page on mobile). Shows customer info, shipping address, item list with images, totals, and a status update dropdown at the top. Update button gold.
+Status history
+Timeline at the bottom of order detail — vertical line with dots, each dot is a status change with timestamp and optional note.
+11.5 User Management
+Table
+User ID, Name, Email, Phone, Registered Date, Total Orders, Status (Active/Blocked badge). Row click expands inline to show order summary.
+Actions
+Block/Unblock toggle button — red when active (blocking), green when blocked (unblocking). Confirm modal before action.
+12. Responsive Behaviour
+Desktop (1280px+)
+Full 3-column product grid, split-screen auth, visible filter sidebar, full navbar links, 4-column homepage grids
+Tablet (768–1279px)
+2-column product grid, filter sidebar hidden behind button, navbar links condensed, 2-column homepage grids
+Mobile (< 768px)
+1-column product grid, full-screen filter drawer, hamburger nav, hero text scaled down, stacked layouts throughout
+All touch targets must be minimum 44x44px on mobile
+Bottom navigation bar optional on mobile (Home, Search, Wishlist, Account icons)
+Swipeable image gallery on product detail page on mobile
+13. Animation & Transition Spec
+Page transition
+opacity: 0 → 1 on route enter. Duration 300ms, ease-in-out. Implemented via CSS class toggle on route change.
+Product card hover
+transform: translateY(-6px) + box-shadow deepens. Duration 250ms ease.
+Image zoom on cards
+img transform: scale(1.08) inside overflow:hidden container. Duration 400ms ease.
+Button hover glow
+box-shadow: 0 0 16px rgba(212,175,55,0.45). Duration 200ms ease.
+Navbar on scroll
+height 72px → 60px + background opacity increases to 0.97. Duration 300ms ease.
+Mobile menu open
+Full-screen overlay fades in (opacity). Nav links slide down with stagger delay (50ms each).
+Floating cart pulse
+When item is added: cart button scales 1 → 1.2 → 1 over 300ms (pulse effect).
+Skeleton loading
+Background shimmer using CSS keyframe: gradient sweeps left to right on cream bg. Duration 1.5s infinite.
+Toast notification
+Slides in from bottom-right. 'Added to cart ✓' in gold. Auto-dismisses after 2.5s. Slides out on dismiss.
+Agent Note: All animations must respect prefers-reduced-motion media query. Wrap all transitions in a check and disable them if the user has reduced motion enabled in their OS settings.
+✦  End of Document  ✦
+This is the fifth and final document in the KarLi Fashion project specification pack.
+
+

@@ -1,0 +1,23 @@
+:root {
+  /* Colours */
+  --color-gold: #d4af37;
+  --color-gold-dark: #a8860c;
+  --color-black: #1a1a1a;
+  --color-bg: #fffdf7;
+  --color-text: #2c2c2c;
+  --color-cream: #f5f0e8;
+  --color-muted: #888888;
+  --color-error: #c0392b;
+  --color-success: #27ae60;
+
+  /* Typography */
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+  --font-display: "Cormorant Garamond", serif;
+
+  /* Spacing & Shape */
+  --border-radius: 4px;
+  --transition: 0.2s ease;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.14);
+}

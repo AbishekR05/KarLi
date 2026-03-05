@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USER ───────────────────────────────────────────────
+model User {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  fullName     String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  role         Role      @default(CUSTOMER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  orders    Order[]
+  wishlist  Wishlist[]
+}
+
+// ─── PRODUCT ────────────────────────────────────────────
+model Product {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  description      String
+  category         Category
+  material         String
+  weightGrams      Float?
+  price            Float
+  stockQuantity    Int       @default(0)
+  images           String    // JSON array of image paths
+  status           ProductStatus @default(ACTIVE)
+  discountEnabled  Boolean   @default(false)
+  discountType     DiscountType?
+  discountValue    Float?
+  discountStart    DateTime?
+  discountEnd      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  orderItems  OrderItem[]
+  wishlist    Wishlist[]
+}
+
+// ─── ORDER ──────────────────────────────────────────────
+model Order {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  shippingName    String
+  shippingAddress String
+  shippingCity    String
+  shippingState   String
+  shippingPincode String
+  shippingPhone   String
+  paymentMethod   PaymentMethod @default(COD)
+  subtotal        Float
+  totalDiscount   Float     @default(0)
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  statusHistory StatusHistory[]
+}
+
+// ─── ORDER ITEM ─────────────────────────────────────────
+model OrderItem {
+  id               String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId          String  @db.ObjectId
+  productId        String  @db.ObjectId
+  productName      String  // snapshot at time of order
+  productImage     String  // snapshot at time of order
+  quantity         Int
+  unitPrice        Float   // original price at time of order
+  discountedPrice  Float   // price after discount (= unitPrice if no discount)
+
+  order    Order   @relation(fields: [orderId], references: [id])
+  product  Product @relation(fields: [productId], references: [id])
+}
+
+// ─── WISHLIST ────────────────────────────────────────────
+model Wishlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  productId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId]) // prevent duplicate wishlist entries
+}
+
+// ─── STATUS HISTORY ─────────────────────────────────────
+model StatusHistory {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String      @db.ObjectId
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+// ─── ENUMS ──────────────────────────────────────────────
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum Category {
+  RINGS
+  NECKLACES
+  EARRINGS
+  BRACELETS
+  BANGLES
+  OTHER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FLAT
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  CARD
+  UPI
+}
